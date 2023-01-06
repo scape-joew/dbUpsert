@@ -172,12 +172,29 @@ dbUpdateTable <- function(
   if (verbose == TRUE) {
     cat("Writing R data to staging table in SQL DB\n")
   }
-
+  
+  # Get empty dataframe with column names and types
+  value_test <- value %>% filter(row_number() < 1)
+  # Create SQL table
+  dbWriteTable(
+    conn = conn,
+    name = stage_table,
+    value = value_test,
+    overwrite = overwrite_stage_table
+  )
+  # Make all varchar/char columns 5000 length
+  char_cols <- colnames(value %>% select_if(is.character))
+  for (col in char_cols) {
+    varchar_query <- paste0("alter table ",stage_table," alter column ",col," varchar(5000)")
+    dbGetQuery(conn, varchar_query)
+  }
+  
+  # Append data into table using dbWriteTable
   dbWriteTable(
     conn = conn,
     name = stage_table,
     value = value,
-    overwrite = overwrite_stage_table
+    append = TRUE
   )
 
   ##############################################################################
